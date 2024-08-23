@@ -165,14 +165,11 @@ def performance_by_id(performance_id):
             response = cur.fetchall()
             performer_names = []
 
-            # Aggregate performer names
+            # Iterate across the response to find all associated performers.
             for row in response: 
                 performer_names.append(row['performer_names'])
 
-            # Ensure that performer_names is a unique list of performers
-            performer_names = list(set(performer_names))
-
-            # Format the response
+            # Format the response in the JSON structure specified in the README.
             if response:
                 formatted_response = {
                     'performance_id': response[0]['performance_id'],
