@@ -131,7 +131,62 @@ def performances():
 
 @app.route('/performances/<int:performance_id>', methods=['GET'])
 def performance_by_id(performance_id):
-    pass
+    specific_performance_id = performance_id
+    if request.method == 'GET':
+
+        # The tests assume that the id provided in the GET request will always
+        # be provided and as a number, but these are additional checks for completeness.
+        if specific_performance_id is None:
+            return {'error': 'No valid performance ID has been provided.'}, 404
+        try:
+            specific_performance_id = int(specific_performance_id)
+        except:
+            return {'error': 'The provided performance ID must be a number.'}, 400
+
+
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(""" 
+                            SELECT pe.performance_id,
+                            per.performer_stagename AS "performer_names", 
+                            pe.performance_date,
+                            ve.venue_name,
+                            pe.review_score AS "review_score"
+                            FROM performance AS pe
+                            JOIN venue AS ve
+                            ON ve.venue_id = pe.venue_id 
+                            JOIN performance_performer_assignment AS ppai
+                            ON ppai.performance_id = pe.performance_id
+                            JOIN performer AS per
+                            ON ppai.performer_id = per.performer_id
+                            WHERE pe.performance_id = (%s)
+                            ORDER BY pe.performance_id ASC
+
+                    """, (specific_performance_id,))
+            response = cur.fetchall()
+            performer_names = []
+
+            # Aggregate performer names
+            for row in response: 
+                performer_names.append(row['performer_names'])
+
+            # Ensure that performer_names is a unique list of performers
+            performer_names = list(set(performer_names))
+
+            # Format the response
+            if response:
+                formatted_response = {
+                    'performance_id': response[0]['performance_id'],
+                    'performer_names': performer_names,
+                    'venue_name': response[0]['venue_name'],
+                    'performance_date': response[0]['performance_date'].strftime('%Y-%m-%d'),
+                    'review_score': response[0]['review_score']
+                }
+            else:
+                return {'error': 'No performance for the provided ID has been found.'}, 404
+
+            return jsonify(formatted_response), 200
+            # return jsonify(response)
+
 
 
 @app.route('/performer_specialty', methods=['GET'])
