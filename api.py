@@ -129,6 +129,65 @@ def performances():
                     '%Y-%m-%d')
         return jsonify(response), 200
 
+
+    elif request.method == 'POST': 
+        
+        data = request.json
+
+        # Checking if necessary parameters have been passed in.
+        mandatory_types = ['performer_id', 'performance_date', 'venue_name', 'review_score']
+        for param in mandatory_types:
+            if data.get(param) is None:
+                return {'error': f"Request missing key '{param}'."}, 400
+        
+        performer_id, performance_date, venue_name, review_score = (
+            data['performer_id'], 
+            data['performance_date'], 
+            data['venue_name'], 
+            data['review_score']
+        )
+
+        return jsonify({
+                "performer_id": performer_id, 
+                "performance_date": performance_date, 
+                "venue_name": venue_name, 
+                "review_score": review_score
+            }), 200
+        # with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        #     cur.execute(
+        #         """
+        #         SELECT venue_id FROM venue WHERE venue_name = %s
+        #         """, (venue_name,))
+        #     venue = cur.fetchone()
+        #     venue_id = venue[0]
+
+        #     # return venue_id
+
+        #     cur.execute(
+        #         """
+        #         INSERT INTO performance (performance_date, venue_id, review_score)
+        #         VALUES (%s, %s, %s)
+        #         RETURNING performance_id
+        #         """, (performance_date, venue_id, review_score))
+        #     performance_id = cur.fetchone()[0]
+
+    
+        #     for performer in data.get('performer_id'): 
+        #         cur.execute(
+        #             """
+        #             INSERT INTO performance_performer_assignment (performance_id, performer_id)
+        #             VALUES (%s, %s)
+        #             """, (performance_id, performer))
+
+        #     conn.commit()
+
+        #     return jsonify({"message": "Performance created", "performance_id": performance_id}), 201
+
+
+
+
+
+
 @app.route('/performances/<int:performance_id>', methods=['GET'])
 def performance_by_id(performance_id):
     specific_performance_id = performance_id
@@ -211,6 +270,7 @@ def performer_specialty():
         response = cur.fetchall()
 
         return response, 200
+
 
 @app.route('/performers/summary', methods=['GET'])
 def performers_summary():
