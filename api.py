@@ -89,7 +89,14 @@ def performers():
 
 @app.route('/venues', methods=["GET"])
 def venues():
-    pass
+    if request.method == 'GET':
+        with conn.cursor(cursor_factory=RealDictCursor) as cur: 
+            cur.execute(f""" SELECT * FROM venue
+                        
+                    """)
+            response = cur.fetchall()
+
+        return jsonify(response), 200
 
 
 @app.route('/performances', methods=['GET', 'POST'])
