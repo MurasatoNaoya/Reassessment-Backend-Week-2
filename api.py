@@ -130,7 +130,7 @@ def performances():
         return jsonify(response), 200
 
 
-    elif request.method == 'POST': 
+    else: 
         
         data = request.json
 
@@ -140,49 +140,57 @@ def performances():
             if data.get(param) is None:
                 return {'error': f"Request missing key '{param}'."}, 400
         
-        performer_id, performance_date, venue_name, review_score = (
-            data['performer_id'], 
-            data['performance_date'], 
-            data['venue_name'], 
-            data['review_score']
-        )
+        performer_ids, performance_date, venue_name, review_score  = [
+            data.get(param) for param in mandatory_types]
 
-        return jsonify({
-                "performer_id": performer_id, 
-                "performance_date": performance_date, 
-                "venue_name": venue_name, 
-                "review_score": review_score
-            }), 200
-        # with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        #     cur.execute(
-        #         """
-        #         SELECT venue_id FROM venue WHERE venue_name = %s
-        #         """, (venue_name,))
-        #     venue = cur.fetchone()
-        #     venue_id = venue[0]
+        # return jsonify({
+        #         "performer_id": performer_id, 
+        #         "performance_date": performance_date, 
+        #         "venue_name": venue_name, 
+        #         "review_score": review_score
+        #     }), 201
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT venue_id FROM venue WHERE venue_name = %s
+                """, (venue_name,))
+            venue = cur.fetchone()
+            # return venue
+            if venue:
+                venue_id = venue['venue_id']
 
-        #     # return venue_id
 
-        #     cur.execute(
-        #         """
-        #         INSERT INTO performance (performance_date, venue_id, review_score)
-        #         VALUES (%s, %s, %s)
-        #         RETURNING performance_id
-        #         """, (performance_date, venue_id, review_score))
-        #     performance_id = cur.fetchone()[0]
+            cur.execute("SELECT MAX(performance_id) FROM performance")
+            max_per_id = cur.fetchone()['max']
+            performance_id = max_per_id + 1
 
-    
-        #     for performer in data.get('performer_id'): 
-        #         cur.execute(
-        #             """
-        #             INSERT INTO performance_performer_assignment (performance_id, performer_id)
-        #             VALUES (%s, %s)
-        #             """, (performance_id, performer))
+            cur.execute(
+                """
+                INSERT INTO performance (performance_id, performance_date, venue_id, review_score)
+                VALUES (%s, %s, %s, %s)
+                RETURNING performance_id
+                """, (performance_id, performance_date, venue_id, review_score))
 
-        #     conn.commit()
 
-        #     return jsonify({"message": "Performance created", "performance_id": performance_id}), 201
+            cur.execute("""SELECT MAX(performance_performer_assignment_id) 
+                        FROM performance_performer_assignment
+                        
+                    """)
+            max_ppai_id = cur.fetchone()['max']
+            performance_performer_assignment_id = max_ppai_id + 1
 
+            for performer_id in performer_ids: 
+                cur.execute(
+                    """
+                    INSERT INTO performance_performer_assignment (performance_performer_assignment_id, 
+                    performance_id, performer_id)
+                    VALUES (%s, %s, %s)
+                    """, (performance_performer_assignment_id, performance_id, performer_id))
+                performance_performer_assignment_id += 1
+
+            conn.commit()
+
+            return jsonify({"message": "Performance created", "performance_id": performance_id}), 201
 
 
 
