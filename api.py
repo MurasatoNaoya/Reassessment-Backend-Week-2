@@ -199,34 +199,18 @@ def performer_specialty():
     - Performers(list of performer names)
     """
     query = """
-    SELECT s.specialty_id, s.specialty_name, p.stagename,
-    FROM specialty s, performer as p
-    WHERE s.specialty_id = p.specialty_id
+    SELECT s.specialty_id, s.specialty_name, 
+    ARRAY_AGG(p.performer_stagename) AS performer_names
+    FROM specialty AS s
+    JOIN performer p ON s.specialty_id = p.specialty_id
+    GROUP BY s.specialty_id, s.specialty_name
+    ORDER BY s.specialty_id ASC;
     """
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(query)
+        response = cur.fetchall()
 
-    try:
-        cursor.execute(query)
-        results = cursor.fetchall()
-
-        specialties = {}
-        for row in results:
-            specialty_id = row['specialty_id']
-            specialty_name = row['specialty_name']
-            performer_name = f"{row['performer_firstname']} {
-                row['performer_surname']}"
-
-            if specialty_id not in specialties:
-                specialties[specialty_id] = {
-                    "specialty_id": specialty_id,
-                    "specialty_name": specialty_name,
-                    "performers": []
-                }
-            specialties[specialty_id]["performers"].append(performer_name)
-
-        return list(specialties.values()), 200
-    except:
-        return {"error": "Something went wrong"}, 500
-
+        return response, 200
 
 @app.route('/performers/summary', methods=['GET'])
 def performers_summary():
