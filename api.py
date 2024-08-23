@@ -95,14 +95,39 @@ def venues():
                         
                     """)
             response = cur.fetchall()
-
         return jsonify(response), 200
 
 
 @app.route('/performances', methods=['GET', 'POST'])
 def performances():
-    pass
+    if request.method == 'GET': 
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(""" SELECT pe.performance_id,
+                            per.performer_stagename AS "performer_name", 
+                            pe.performance_date,
+                            ve.venue_name,
+                            pe.review_score AS "score"
+                            FROM performance AS pe
+                            JOIN venue AS ve
+                            ON ve.venue_id = pe.venue_id 
+                            JOIN performance_performer_assignment AS ppai
+                            ON ppai.performance_id = pe.performance_id
+                            JOIN performer AS per
+                            ON ppai.performer_id = per.performer_id
+                            ORDER BY pe.performance_id ASC
 
+                    """)
+            
+
+            response = cur.fetchall()
+            
+            # Performance dates come in a too verbose format straight for Postgres,
+            # .strftime('%Y-%m-%d') can be applied to the datetime objects, to present
+            # then int he standard YYY-MM-DD format the API's tests expect.
+            for row in response:
+                row['performance_date'] = row['performance_date'].strftime(
+                    '%Y-%m-%d')
+        return jsonify(response), 200
 
 @app.route('/performances/<int:performance_id>', methods=['GET'])
 def performance_by_id(performance_id):
