@@ -158,11 +158,15 @@ def performances():
             # return venue
             if venue:
                 venue_id = venue['venue_id']
+            else:
+                return {'error': f'Please provide a valid venue.'}, 404
+
 
 
             cur.execute("SELECT MAX(performance_id) FROM performance")
             max_per_id = cur.fetchone()['max']
             performance_id = max_per_id + 1
+            # return jsonify(performance_id)
 
             cur.execute(
                 """
@@ -190,7 +194,7 @@ def performances():
 
             conn.commit()
 
-            return jsonify({"message": "Performance created", "performance_id": performance_id}), 201
+            return jsonify({"message": "Performance created", "performance_id": performance_id}), 200
 
 
 
@@ -265,24 +269,48 @@ def performer_specialty():
     - Specialty Name
     - Performers(list of performer names)
     """
-    query = """
-    SELECT s.specialty_id, s.specialty_name, 
-    ARRAY_AGG(p.performer_stagename) AS performer_names
-    FROM specialty AS s
-    JOIN performer p ON s.specialty_id = p.specialty_id
-    GROUP BY s.specialty_id, s.specialty_name
-    ORDER BY s.specialty_id ASC;
-    """
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute(query)
-        response = cur.fetchall()
+    if request.method == 'GET':
+    
+        query = """
+        SELECT s.specialty_id, s.specialty_name, 
+        ARRAY_AGG(p.performer_stagename) AS performer_names
+        FROM specialty AS s
+        JOIN performer p ON s.specialty_id = p.specialty_id
+        GROUP BY s.specialty_id, s.specialty_name
+        ORDER BY s.specialty_id ASC;
+        """
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(query)
+            response = cur.fetchall()
 
-        return response, 200
+            return response, 200
 
 
 @app.route('/performers/summary', methods=['GET'])
 def performers_summary():
-    pass
+    
+    if request.method == 'GET':
+
+        query = '''
+                    SELECT 
+                    p.performer_id,
+                    p.performer_stagename,
+                    COUNT(ppa.performance_id) AS total_performances,
+                    ROUND(AVG(perf.review_score), 2) AS average_review_score
+                    FROM performer p
+                    JOIN performance_performer_assignment ppa ON p.performer_id = ppa.performer_id
+                    JOIN performance perf ON ppa.performance_id = perf.performance_id
+                    GROUP BY p.performer_id, p.performer_stagename
+                    ORDER BY total_performances DESC;
+            '''
+        
+
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(query)
+            response = cur.fetchall()
+
+            return response, 200
+
 
 
 if __name__ == "__main__":
